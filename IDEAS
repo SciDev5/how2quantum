@@ -1,0 +1,19 @@
+ideas
+
+
+
+- rust nn lib
+
+- self-playing chess or smth classic
+
+- yet another DFT sim
+
+- >  vocal formant analyser using reassignment :3c 
+
+- 
+
+
+- dynamic schrodinger eqn solver
+    - numpy backend -> given potentials returns texture [one axis is field, other is eigenstates]
+    - frontent uses similar hack as spexia to render
+    
