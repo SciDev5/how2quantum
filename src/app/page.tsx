@@ -2,7 +2,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import styles from "./page.module.css";
 import { decomposition, gen_hamiltonian, solve_schrodinger, superposition, time_evolve } from "./qm";
-import { GL2Canvas, useGLX, XShader, XBuffer } from "./render_generic";
 import { Canvas2D, useC2D as useC2D } from "./render_2d";
 import * as M from "mathjs"
 
@@ -177,7 +176,7 @@ function CanvasClickDetector({
 
   const useEvent = function <K extends keyof HTMLElementEventMap>(
     event_name: K,
-    event?: (ev: HTMLElementEventMap[K]) => any,
+    event?: (ev: HTMLElementEventMap[K]) => void,
   ) {
     useEffect(() => {
       if (event == null) return
@@ -271,13 +270,13 @@ function WavefunctionEditor({ wavefn, set_wavefn, potential_ref, v_max }: { wave
 
         if (i > i_prev) {
           for (let j = i_prev + 1; j < i; j++) {
-            let k = (j - i_prev) / (i - i_prev + 1)
+            const k = (j - i_prev) / (i - i_prev + 1)
             wavefn[j].re = k * (y - y_prev) + y_prev
           }
         }
         if (i_prev > i) {
           for (let j = i + 1; j < i_prev; j++) {
-            let k = (j - i) / (i_prev - i + 1)
+            const k = (j - i) / (i_prev - i + 1)
             wavefn[j].re = k * (y_prev - y) + y
           }
         }
