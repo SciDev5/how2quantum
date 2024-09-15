@@ -36,3 +36,26 @@ export function solve_schrodinger(H: M.Matrix): { l: number, v: M.Complex[] }[] 
         ),
     })).sort((a, b) => a.l - b.l)
 }
+
+export function decomposition(vecs: { l: number, v: M.Complex[] }[], target_fn: M.Complex[]): M.Complex[] {
+    const target_fn_mag = M.sqrt(M.add(...target_fn.map(v => v.re * v.re + v.im * v.im))) as number
+    target_fn.forEach((_, i) => { target_fn[i] = M.multiply(target_fn[i], 1 / target_fn_mag) as M.Complex })
+    console.log(target_fn);
+
+
+    return vecs.map(
+        ({ v }) => M.add(
+            ...v.map((_, i) => M.multiply(v[i], target_fn[i]))
+        ) as M.Complex
+    )
+}
+
+export function superposition(vecs: { l: number, v: M.Complex[] }[], sum_spec: M.Complex[]): M.Complex[] {
+    return M.add(
+        ...sum_spec
+            .map(
+                (c, i) => vecs[i].v.map(v_i => M.multiply(c, v_i) as M.MathNumericType)
+            )
+            .filter(v => v != null)
+    ) as M.Complex[]
+}
