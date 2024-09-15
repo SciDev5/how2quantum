@@ -24,7 +24,7 @@ function The() {
 
   const TIME_SCALE = 0.1
 
-  const [U_diag, set_U_diag] = useState([...new Array(50).fill(0), ...new Array(20).fill(-50), ...new Array(50).fill(0)] as number[])
+  const U_diag = useMemo(() => [...new Array(50).fill(0), ...new Array(20).fill(-50), ...new Array(50).fill(0)] as number[], [])
 
   const gen_psi_basis = () => {
     const _t_start_eigs = performance.now()
@@ -118,7 +118,7 @@ function The() {
             ? <TimeEvolver decomp_t0={decomp_t0} t0={t0} psi_basis={psi_basis} time_scale={TIME_SCALE} potential_diag={U_diag} v_max={v_max} />
             : editing == "U"
               ? <PotentialEditor wavefn={superposition(psi_basis, time_evolve(psi_basis, decomp_t0, (te - t0) * TIME_SCALE))} potential_ref={U_diag} v_max={v_max} set_potential={update_potential} />
-              : <WavefunctionEditor wavefn={psi_basis[0].v.map(v => M.complex(0, 0))} potential_ref={U_diag} v_max={v_max} set_wavefn={update_wavefn} />
+              : <WavefunctionEditor wavefn={psi_basis[0].v.map(() => M.complex(0, 0))} potential_ref={U_diag} v_max={v_max} set_wavefn={update_wavefn} />
         }
       </Canvas2D>
     </div>
@@ -148,18 +148,17 @@ function HelpModal({ on_escape }: { on_escape: () => void }) {
     <div>
       <h1>How to Quantum Mechanics</h1>
       <p>
-        :: :: :: Quantum mechanics is mysterious, ...but what if it weren't? :: :: ::
+        {":: :: :: Quantum mechanics is mysterious, ...but what if it weren't? :: :: ::"}
       </p>
       <br />
-      <h2>Interactive demos are the best way to understand how things work.</h2>
+      <h2>{"Interactive demos are the best way to understand how things work."}</h2>
       <p>
-        To use this demo, click and drag on the page to edit the <b>potential
-          energy</b> and the <b>wavefunction</b>. The buttons at the top of the
-        screen allow you toswitch what you're editing, or select <b>energy
-          eigenstates</b>.
+        {"To use this demo, click and drag on the page to edit the "}
+        <b>potential energy</b> and the <b>wavefunction</b>.
+        {"The buttons at the top of the screen allow you toswitch what you're editing, or select "}<b>energy eigenstates</b>.
       </p>
       <br />
-      <h2>An eigen-what-now? Wave-funct-o-whatever?</h2>
+      <h2>{"An eigen-what-now? Wave-funct-o-whatever?"}</h2>
       <p>
         TODO: Explain basic QM
       </p>
@@ -217,13 +216,13 @@ function PotentialEditor({ wavefn, potential_ref, set_potential, v_max }: { wave
 
         if (i > i_prev) {
           for (let j = i_prev + 1; j < i; j++) {
-            let k = (j - i_prev) / (i - i_prev + 1)
+            const k = (j - i_prev) / (i - i_prev + 1)
             potential_ref[j] = k * (y - y_prev) + y_prev
           }
         }
         if (i_prev > i) {
           for (let j = i + 1; j < i_prev; j++) {
-            let k = (j - i) / (i_prev - i + 1)
+            const k = (j - i) / (i_prev - i + 1)
             potential_ref[j] = k * (y_prev - y) + y
           }
         }
