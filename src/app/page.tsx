@@ -155,12 +155,29 @@ function HelpModal({ on_escape }: { on_escape: () => void }) {
         {"To use this demo, click and drag on the page to edit the "}
         <b>potential energy</b> and the <b>wavefunction</b>.
         {"The buttons at the top of the screen allow you toswitch what you're editing, or select "}<b>energy eigenstates</b>.
+
+        {"Note that the rainbow colors represent the angle (aka the \"phase\" or \"argument\") of the complex number representing the wavefunction at any given point"}
       </p>
       <br />
       <h2>{"An eigen-what-now? Wave-funct-o-whatever?"}</h2>
-      <p>
-        TODO: Explain basic QM
-      </p>
+      <p>{`
+        An energy eigenstate is a state of the wavefunction which has a specific and consistent energy everywhere. These are useful
+        because they evolve through time in a very simple manner (namely, by rotating in the complex plane / Ψ(t)=Ψ(0)e^(-iEt)).
+        `}<br /><br />{`
+        The wavefunction is of the form Ψ(x,t) = some complex number, a function that varies in value over time and space, which when squared
+        gives the probability a particle will could be found at a given location*.
+        `}<br /><br />{`
+        Superposition is a result of the linearity of the schrodinger equation. What this means is that it allows solutions to the equation
+        to be added together and scaled up and down without issue, while still remaining realistic and true. We can add lots of energy
+        eigenstates together to build whatever shape we want and then evolve them all to see how the combined wavefunction behaves.
+        `}<br /><br />{`
+        The collapse of the wavefunction in this case comes if you try to measure the systems energy, the superposed state does not have the
+        same energy everywhere, and so if it is to be measured it must choose one. This collapses the wavefunction.
+        `}<br /><br />{`
+        There is more, but I'm out of time! Have fun playing with physics!
+        `}<br /><br /><br />{`
+        * note that this is probability density and this explanation is for Ψ(x,t)=<Ψ|x> specifically.
+      `}</p>
     </div>
   </dialog>)
 }
