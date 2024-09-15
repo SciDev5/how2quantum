@@ -1,7 +1,7 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import styles from "./page.module.css";
-import { decomposition, gen_hamiltonian, solve_schrodinger, superposition } from "./qm";
+import { decomposition, gen_hamiltonian, solve_schrodinger, superposition, time_evolve } from "./qm";
 import { GL2Canvas, useGLX, XShader, XBuffer } from "./render_generic";
 import { Canvas2D, useC2D as useC2D } from "./render_2d";
 import * as M from "mathjs"
@@ -21,89 +21,298 @@ export default function Home() {
 }
 
 function The() {
-  const z = performance.now()
 
+  const TIME_SCALE = 0.1
 
-  const U_diag = [...new Array(60).fill(0), ...new Array(20).fill(-50), ...new Array(60).fill(0)]
-  const H = gen_hamiltonian(U_diag, { dx: 0.1, m: 1.0, hbar: 1.0 })
-  const psi_basis = solve_schrodinger(H)
+  const [U_diag, set_U_diag] = useState([...new Array(50).fill(0), ...new Array(20).fill(-50), ...new Array(50).fill(0)] as number[])
 
+  const gen_psi_basis = () => {
+    const _t_start_eigs = performance.now()
+    const H = gen_hamiltonian(U_diag, { dx: 0.1, m: 1.0, hbar: 1.0 })
+    const psi_basis = solve_schrodinger(H)
+    console.log("t: eigendecomp", performance.now() - _t_start_eigs);
+    return psi_basis
+  }
 
-  console.log("eigs", performance.now() - z);
+  const [psi_basis, set_psi_basis] = useState(gen_psi_basis)
 
-  const r = performance.now()
+  const [decomp_t0, set_decomp_t0] = useState(() => {
+    const _t_decomp = performance.now()
+    const decomp_t0 = decomposition(psi_basis, psi_basis[0].v.map((_, i) => M.complex(Math.sqrt(Math.max(0, 0.02 - Math.abs(i / psi_basis[0].v.length - 0.5))), 0)))
+    console.log("t: decomp/superpos", performance.now() - _t_decomp);
+    return decomp_t0
+  })
 
-  const decomp = decomposition(psi_basis.slice(0, psi_basis[0].v.length), psi_basis[0].v.map((_, i) => M.complex(Math.sqrt(Math.max(0, 0.01 - Math.abs(i / psi_basis[0].v.length - 0.5))), 0)))
-  // const decomp = decomposition(psi_basis.slice(0, 100), psi_basis[0].v.map((_, i) => M.complex(Math.sqrt(i), 0)))
-  console.log(decomp);
+  const [t0, set_t0] = useState(() => Date.now() / 1000)
+  const [te, set_te] = useState(() => Date.now() / 1000)
 
+  const [editing, set_editing] = useState<null | "U" | "psi">(null)
+  const [which_to_edit, set_which_to_edit] = useState<null | "U" | "psi">("U")
 
-  // const psi = superposition(psi_basis, decomp)
+  const update_potential = useCallback(() => {
+    const psi = superposition(psi_basis, time_evolve(psi_basis, decomp_t0, (te - t0) * TIME_SCALE))
+    const psi_basis_new = gen_psi_basis()
+    set_psi_basis(psi_basis_new)
+    const decomp_t0_new = decomposition(psi_basis_new, psi)
+    set_decomp_t0(decomp_t0_new)
+    set_t0(Date.now() / 1000)
+    set_editing(null)
+  }, [U_diag, decomp_t0, t0, te])
 
-  console.log("decomp/superpos", performance.now() - r);
+  const update_wavefn = useCallback((psi: M.Complex[]) => {
+    const decomp_t0_new = decomposition(psi_basis, psi)
+    set_decomp_t0(decomp_t0_new)
+    set_t0(Date.now() / 1000)
+    set_editing(null)
+  }, [psi_basis])
+
+  const v_max = 50 //useMemo(() => Math.max(...U_diag.map(Math.abs)), [U_diag.toString()])
+
+  const [pure_state_i_str, set_pure_state_i_str] = useState("0")
 
   return (
     <div style={{ display: "flex" }}>
+      <div>
+        edit:
+        <button onClick={() => set_which_to_edit(null)} disabled={which_to_edit === null}>none</button>
+        <button onClick={() => {
+          set_which_to_edit("psi")
+          set_t0(Date.now())
+        }} disabled={which_to_edit === "psi"}>wavefunction</button>
+        <button onClick={() => {
+          set_which_to_edit("U")
+        }} disabled={which_to_edit === "U"}>potential</button>
+      </div>
+      <div>
+        purify:
+        <input value={pure_state_i_str} onChange={e => {
+          set_pure_state_i_str(e.currentTarget.value)
+          const n = e.currentTarget.valueAsNumber
+          if (!isFinite(n) || !Number.isInteger(n)) return
+          update_wavefn([...psi_basis[n].v])
+        }} type="number" min={0} max={psi_basis.length} step={1} />
+      </div>
       <Canvas2D>
-        <TimeEvolver decomp_t0={decomp} psi_basis={psi_basis} time_scale={0.1} potential_diag={U_diag} />
+        <CanvasClickDetector on_mousedown={() => {
+          set_editing(which_to_edit)
+          set_te(Date.now() / 1000)
+        }} />
+        {
+          editing == null
+            ? <TimeEvolver decomp_t0={decomp_t0} t0={t0} psi_basis={psi_basis} time_scale={TIME_SCALE} potential_diag={U_diag} v_max={v_max} />
+            : editing == "U"
+              ? <PotentialEditor wavefn={superposition(psi_basis, time_evolve(psi_basis, decomp_t0, (te - t0) * TIME_SCALE))} potential_ref={U_diag} v_max={v_max} set_potential={update_potential} />
+              : <WavefunctionEditor wavefn={psi_basis[0].v.map(v => M.complex(0, 0))} potential_ref={U_diag} v_max={v_max} set_wavefn={update_wavefn} />
+        }
       </Canvas2D>
     </div>
   )
 }
 
-function TimeEvolver({ decomp_t0, psi_basis, time_scale, potential_diag }: {
+function CanvasClickDetector({
+  on_mousedown,
+  on_mouseup,
+}: {
+  on_mousedown?: (e: MouseEvent) => void,
+  on_mouseup?: (e: MouseEvent) => void,
+}) {
+  const cnv = useC2D().ctx.canvas
+
+  const useEvent = function <K extends keyof HTMLElementEventMap>(
+    event_name: K,
+    event?: (ev: HTMLElementEventMap[K]) => any,
+  ) {
+    useEffect(() => {
+      if (event == null) return
+      cnv.addEventListener(event_name, event)
+      return () => cnv.removeEventListener(event_name, event)
+    }, [event])
+  }
+  useEvent("mousedown", on_mousedown)
+  useEvent("mouseup", on_mouseup)
+
+  return <></>
+}
+
+function PotentialEditor({ wavefn, potential_ref, set_potential, v_max }: { wavefn: M.Complex[], potential_ref: number[], set_potential: () => void, v_max: number }) {
+  const c2d = useC2D()
+  useEffect(() => {
+    const ev = () => {
+      set_potential()
+    }
+    addEventListener("mouseup", ev)
+    return () => removeEventListener("mouseup", ev)
+  }, [set_potential])
+
+  const [update, set_update] = useState(0)
+
+  const state = useMemo<{ prev?: { i: number, y: number } }>(() => ({}), [])
+
+  useEffect(() => {
+    const cb = (e: MouseEvent) => {
+      const i = Math.floor(e.offsetX / c2d.width * potential_ref.length)
+      const y = (1.0 - e.offsetY / c2d.height * 2.0) * v_max * 2.0
+
+      if (state.prev != null) {
+        const i_prev = state.prev.i
+        const y_prev = state.prev.y
+
+        if (i > i_prev) {
+          for (let j = i_prev + 1; j < i; j++) {
+            let k = (j - i_prev) / (i - i_prev + 1)
+            potential_ref[j] = k * (y - y_prev) + y_prev
+          }
+        }
+        if (i_prev > i) {
+          for (let j = i + 1; j < i_prev; j++) {
+            let k = (j - i) / (i_prev - i + 1)
+            potential_ref[j] = k * (y_prev - y) + y
+          }
+        }
+      }
+
+      potential_ref[i] = y
+      state.prev = { i, y }
+
+      set_update(Math.random())
+    }
+    c2d.ctx.canvas.addEventListener("mousemove", cb)
+    return () => c2d.ctx.canvas.removeEventListener("mousemove", cb)
+  }, [potential_ref])
+
+  return (<DrawStuff
+    wavefn={wavefn}
+    potential_diag={potential_ref}
+    v_max={v_max}
+    force_update={update}
+  />)
+}
+
+
+function WavefunctionEditor({ wavefn, set_wavefn, potential_ref, v_max }: { wavefn: M.Complex[], potential_ref: number[], set_wavefn: (wavefn: M.Complex[]) => void, v_max: number }) {
+  const c2d = useC2D()
+  useEffect(() => {
+    const ev = () => {
+      set_wavefn(wavefn)
+    }
+    addEventListener("mouseup", ev)
+    return () => removeEventListener("mouseup", ev)
+  }, [set_wavefn, wavefn])
+
+  const [update, set_update] = useState(0)
+
+  const state = useMemo<{ prev?: { i: number, y: number } }>(() => ({}), [])
+
+  useEffect(() => {
+    const cb = (e: MouseEvent) => {
+      const i = Math.floor(e.offsetX / c2d.width * wavefn.length)
+      const y = (1.0 - e.offsetY / c2d.height * 2.0) * 0.5
+
+      if (state.prev != null) {
+        const i_prev = state.prev.i
+        const y_prev = state.prev.y
+
+        if (i > i_prev) {
+          for (let j = i_prev + 1; j < i; j++) {
+            let k = (j - i_prev) / (i - i_prev + 1)
+            wavefn[j].re = k * (y - y_prev) + y_prev
+          }
+        }
+        if (i_prev > i) {
+          for (let j = i + 1; j < i_prev; j++) {
+            let k = (j - i) / (i_prev - i + 1)
+            wavefn[j].re = k * (y_prev - y) + y
+          }
+        }
+      }
+
+      wavefn[i].re = y
+      state.prev = { i, y }
+
+      set_update(Math.random())
+    }
+    c2d.ctx.canvas.addEventListener("mousemove", cb)
+    return () => c2d.ctx.canvas.removeEventListener("mousemove", cb)
+  }, [potential_ref])
+
+  return (<DrawStuff
+    wavefn={wavefn}
+    show_split_wavefn
+    potential_diag={potential_ref}
+    v_max={v_max}
+    force_update={update}
+  />)
+}
+
+function TimeEvolver({ decomp_t0, t0, psi_basis, time_scale, potential_diag, v_max }: {
   decomp_t0: M.Complex[],
   psi_basis: {
     l: number;
     v: M.Complex[];
   }[],
   time_scale: number,
-  potential_diag: number[]
+  t0: number,
+  potential_diag: number[],
+  v_max: number,
 }) {
-  const state = useMemo(() => ({ t_0: 0 }), [])
   const [current_psi, set_current_psi] = useState(psi_basis[0].v)
   useEffect(() => {
-    state.t_0 = Date.now() / 1000
     const id = setInterval(() => {
-      const t = Date.now() / 1000 - state.t_0
-      const current_decomp = decomp_t0.map((c, i) => M.multiply(c, M.complex({ phi: -psi_basis[i].l * t * time_scale, r: 1 })) as M.Complex)
+      const t = (Date.now() / 1000 - t0) * time_scale
+      const current_decomp = time_evolve(psi_basis, decomp_t0, t)
       set_current_psi(superposition(psi_basis, current_decomp))
     })
     return () => { clearInterval(id) }
   }, [decomp_t0, psi_basis, time_scale])
-  return <DrawWavefunction wavefn={current_psi} potential_diag={potential_diag} />
+  return (<DrawStuff
+    wavefn={current_psi}
+    potential_diag={potential_diag}
+    v_max={v_max}
+  />)
 }
 
-function DrawWavefunction({ wavefn, potential_diag }: { wavefn: M.Complex[], potential_diag: number[] }) {
+function DrawStuff({
+  wavefn,
+  show_split_wavefn,
+  potential_diag, v_max,
+  force_update,
+}: {
+  wavefn?: M.Complex[],
+  show_split_wavefn?: boolean,
+  potential_diag: number[], v_max: number,
+  force_update?: number,
+}) {
   const c2d = useC2D()
 
   useEffect(() => {
     c2d.clear()
 
-    // c2d.line("#444444", [0, c2d.height / 2], [c2d.width, c2d.height / 2])
-    const v_max = Math.max(...potential_diag.map(Math.abs))
-    c2d.line("#777777", ...potential_diag.map((v, i) => [c2d.width * i / (potential_diag.length - 1), c2d.height / 2 * (1 - v / v_max)] satisfies [number, number]))
-    // c2d.line("#ff0000", ...wavefn.map((z, i) => {
-    //   return [i / (wavefn.length - 1) * c2d.width, c2d.height * (0.5 - z.re)] satisfies [number, number]
-    // }))
-    // c2d.line("#0000ff", ...wavefn.map((z, i) => {
-    //   return [i / (wavefn.length - 1) * c2d.width, c2d.height * (0.5 - z.im)] satisfies [number, number]
-    // }))
+    // draw potential
+    c2d.line("#777777", ...potential_diag.map((v, i) => [c2d.width * i / (potential_diag.length - 1), c2d.height / 2 * (1 - v / v_max / 2)] satisfies [number, number]))
 
-    c2d.colored_line_path(wavefn.map((z, i) => {
-      const { phi, r } = z.toPolar()
-
-      return {
-        color: `hsl(${phi}rad, 100%, 50%)`,
-        pos: [i / (wavefn.length - 1) * c2d.width, c2d.height * (1 - 5 * r ** 2)]
+    // draw wavefunction
+    if (wavefn != null) {
+      if (show_split_wavefn ?? false) {
+        // ... as real and complex waves
+        c2d.line("#444444", [0, c2d.height / 2], [c2d.width, c2d.height / 2])
+        c2d.line("#ff0000", ...wavefn.map((z, i) => {
+          return [i / (wavefn.length - 1) * c2d.width, c2d.height * (0.5 - z.re)] satisfies [number, number]
+        }))
+        c2d.line("#0000ff", ...wavefn.map((z, i) => {
+          return [i / (wavefn.length - 1) * c2d.width, c2d.height * (0.5 - z.im)] satisfies [number, number]
+        }))
+      } else {
+        // ... as a magnitude squared and argument as color 
+        c2d.colored_line_path(wavefn.map((z, i) => {
+          const { phi, r } = z.toPolar()
+          return {
+            color: `hsl(${phi}rad, 100%, 50%)`,
+            pos: [i / (wavefn.length - 1) * c2d.width, c2d.height * (1 - 5 * r ** 2)]
+          }
+        }))
       }
-    }))
-    // c2d.line("#ffffff", ...wavefn.map((z, i) => {
-    //   const r2 = z.re ** 2 + z.im ** 2
-    //   return [i / (wavefn.length - 1) * c2d.width, c2d.height * (1 - r2)] satisfies [number, number]
-    // }))
-
-  }, [wavefn])
+    }
+  }, [wavefn, force_update])
 
   return <></>
 }

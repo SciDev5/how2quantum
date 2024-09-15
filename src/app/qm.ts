@@ -40,8 +40,6 @@ export function solve_schrodinger(H: M.Matrix): { l: number, v: M.Complex[] }[] 
 export function decomposition(vecs: { l: number, v: M.Complex[] }[], target_fn: M.Complex[]): M.Complex[] {
     const target_fn_mag = M.sqrt(M.add(...target_fn.map(v => v.re * v.re + v.im * v.im))) as number
     target_fn.forEach((_, i) => { target_fn[i] = M.multiply(target_fn[i], 1 / target_fn_mag) as M.Complex })
-    console.log(target_fn);
-
 
     return vecs.map(
         ({ v }) => M.add(
@@ -58,4 +56,8 @@ export function superposition(vecs: { l: number, v: M.Complex[] }[], sum_spec: M
             )
             .filter(v => v != null)
     ) as M.Complex[]
+}
+
+export function time_evolve(vecs: { l: number, v: M.Complex[] }[], decomp_t0: M.Complex[], t: number): M.Complex[] {
+    return decomp_t0.map((c, i) => M.multiply(c, M.complex({ phi: -vecs[i].l * t, r: 1 })) as M.Complex)
 }

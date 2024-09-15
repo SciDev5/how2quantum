@@ -26,7 +26,7 @@ export function Canvas2D({ children }: { children: ReactNode }) {
 
     return (
         <>
-            <canvas ref={canvas_ref} width={1000} height={400} />
+            <canvas ref={canvas_ref} width={window.innerWidth * .8} height={window.innerHeight * .8} />
             {c2d != null &&
                 <REACT_2D_CONTEXT.Provider value={c2d}>
                     {children}
