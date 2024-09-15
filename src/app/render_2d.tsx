@@ -1,4 +1,4 @@
-import { createContext, ReactNode, useContext, useEffect, useRef, useState } from "react"
+import { createContext, ReactNode, RefObject, useContext, useEffect, useRef, useState } from "react"
 
 const REACT_2D_CONTEXT = createContext<null | C2D>(null)
 
@@ -24,9 +24,18 @@ export function Canvas2D({ children }: { children: ReactNode }) {
         set_c2d(c2d)
     }, [])
 
+    const [_resize_rand, _set_resize_rand] = useState(0)
+    useEffect(() => {
+        const cb = () => {
+            _set_resize_rand(Math.random())
+        }
+        addEventListener("resize", cb)
+        return () => removeEventListener("resize", cb)
+    })
+
     return (
         <>
-            <canvas ref={canvas_ref} width={window.innerWidth * .8} height={window.innerHeight * .8} />
+            <canvas ref={canvas_ref} width={window.innerWidth - 50} height={window.innerHeight - 50 - 50} style={{ margin: 25 }} />
             {c2d != null &&
                 <REACT_2D_CONTEXT.Provider value={c2d}>
                     {children}

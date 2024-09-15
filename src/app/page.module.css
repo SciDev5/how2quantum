@@ -1,1 +1,132 @@
-.page {}
+.page {
+  display: flex;
+  flex-direction: column;
+
+  --h: 50px;
+}
+
+.page:last-child {
+  flex: 0 1;
+  width: 90vw;
+  height: calc(100vh - 50px - var(--h));
+}
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  flex: 1 1;
+  background: #050510;
+  font-weight: bold;
+}
+
+.header_name {
+  flex: 1 1;
+  font-size: 1.5em;
+  line-height: var(--h);
+  padding-inline: 1em;
+  flex-wrap: nowrap;
+}
+
+.erm_ackchually {
+  vertical-align: middle;
+  flex: 1 1;
+  display: inline-block;
+  height: 36px;
+  /* margin-top: 5px; */
+  margin-left: 100px;
+  border: none;
+  background: #202030;
+  border: 2px solid #202030;
+  padding-inline: 2em;
+  transition: .2s border;
+}
+
+.erm_ackchually:hover:not(:active) {
+  /* --v: 20%;
+  --l: 20%;
+  background: repeating-linear-gradient(30deg, hsl(0deg, var(--l), var(--v)), hsl(60deg, var(--l), var(--v)) 20px, hsl(120deg, var(--l), var(--v)) 40px, hsl(180deg, var(--l), var(--v)) 60px, hsl(240deg, var(--l), var(--v)) 80px, hsl(300deg, var(--l), var(--v)) 100px, hsl(3600deg, var(--l), var(--v)) 120px); */
+  border: 2px solid #373757;
+  background: linear-gradient(30deg, #404060, #101017 100px);
+}
+
+.erm_ackchually:active {
+  background: #404060;
+}
+
+.header_edit {
+  display: flex;
+  flex: 1 1;
+}
+
+.header_edit>* {
+  flex: 1 1;
+  line-height: var(--h);
+  vertical-align: middle;
+}
+
+.header_edit>span {
+  flex: 1 1;
+  text-align: center;
+  background: #101027;
+  min-width: 12em;
+}
+
+.header_edit>span:not(:first-child) {
+  margin-left: var(--h);
+}
+
+.header_edit>button {
+  color: #ffffff;
+  /* background: #0a0a20; */
+  background: #303057;
+  border: 3px solid #303057;
+  font: inherit;
+}
+
+.header_edit>button:hover {
+  background: #404070;
+}
+
+.header_edit>button:disabled {
+  /* background: #303057; */
+  background: #0a0a20;
+}
+
+.header_edit>button:active {
+  background: #404060;
+}
+
+.header_edit>button+button {
+  border-left: none;
+}
+
+
+.header_edit>input {
+  color: #ffffff;
+  background: #202030;
+  border: 3px solid #303057;
+  font: inherit;
+  padding-inline: 1em;
+}
+
+.helpmodal {
+  background: transparent;
+  color: #ffffff;
+  border: 3px solid #404060;
+  width: calc(min(80vw, 50em));
+  margin-left: calc(50vw - 0.5 * min(80vw, 50em));
+  margin-top: 40px;
+  font-size: 0.8em;
+  font-weight: normal;
+}
+
+.helpmodal>div {
+  padding: 2em;
+  max-height: calc(100vh - 80px);
+  line-height: 1.5;
+}
+
+.helpmodal::backdrop {
+  background: #00000040;
+  backdrop-filter: blur(10px);
+}

@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import styles from "./page.module.css";
 import { decomposition, gen_hamiltonian, solve_schrodinger, superposition, time_evolve } from "./qm";
 import { GL2Canvas, useGLX, XShader, XBuffer } from "./render_generic";
@@ -57,6 +57,7 @@ function The() {
     set_decomp_t0(decomp_t0_new)
     set_t0(Date.now() / 1000)
     set_editing(null)
+    set_pure_state_i_str("")
   }, [U_diag, decomp_t0, t0, te])
 
   const update_wavefn = useCallback((psi: M.Complex[]) => {
@@ -64,33 +65,48 @@ function The() {
     set_decomp_t0(decomp_t0_new)
     set_t0(Date.now() / 1000)
     set_editing(null)
+    set_pure_state_i_str("")
   }, [psi_basis])
 
   const v_max = 50 //useMemo(() => Math.max(...U_diag.map(Math.abs)), [U_diag.toString()])
 
   const [pure_state_i_str, set_pure_state_i_str] = useState("0")
 
+  const [show_helpmodal, set_show_helpmodal] = useState(false)
+  const hide_helpmodal = useCallback(() => { set_show_helpmodal(false) }, [])
+
   return (
-    <div style={{ display: "flex" }}>
-      <div>
-        edit:
-        <button onClick={() => set_which_to_edit(null)} disabled={which_to_edit === null}>none</button>
-        <button onClick={() => {
-          set_which_to_edit("psi")
-          set_t0(Date.now())
-        }} disabled={which_to_edit === "psi"}>wavefunction</button>
-        <button onClick={() => {
-          set_which_to_edit("U")
-        }} disabled={which_to_edit === "U"}>potential</button>
-      </div>
-      <div>
-        purify:
-        <input value={pure_state_i_str} onChange={e => {
-          set_pure_state_i_str(e.currentTarget.value)
-          const n = e.currentTarget.valueAsNumber
-          if (!isFinite(n) || !Number.isInteger(n)) return
-          update_wavefn([...psi_basis[n].v])
-        }} type="number" min={0} max={psi_basis.length} step={1} />
+    <div className={styles.main} style={{ display: "flex", flexDirection: "column", height: "100vh" }}>
+      <div className={styles.header}>
+        <div className={styles.header_name}>
+          How2Quantum
+
+          <button
+            className={styles.erm_ackchually}
+            onClick={() => set_show_helpmodal(true)}
+          >wait actually how tho...</button>
+          {show_helpmodal && <HelpModal on_escape={hide_helpmodal} />}
+        </div>
+        <div className={styles.header_edit}>
+          <span>click and drag to edit </span>
+          {/* <button onClick={() => set_which_to_edit(null)} disabled={which_to_edit === null}>none</button> */}
+          <button onClick={() => {
+            set_which_to_edit("psi")
+            set_t0(Date.now())
+          }} disabled={which_to_edit === "psi"}>wavefunction</button>
+          <button onClick={() => {
+            set_which_to_edit("U")
+          }} disabled={which_to_edit === "U"}>potential</button>
+
+          <span>select energy level</span>
+          <input value={pure_state_i_str} onChange={e => {
+            set_pure_state_i_str(e.currentTarget.value)
+            const n = e.currentTarget.valueAsNumber
+            if (!isFinite(n) || !Number.isInteger(n) || n >= psi_basis.length) return
+            update_wavefn([...psi_basis[n].v])
+            set_pure_state_i_str(e.currentTarget.value)
+          }} type="number" min={0} max={psi_basis.length - 1} step={1} />
+        </div>
       </div>
       <Canvas2D>
         <CanvasClickDetector on_mousedown={() => {
@@ -107,6 +123,48 @@ function The() {
       </Canvas2D>
     </div>
   )
+}
+
+function HelpModal({ on_escape }: { on_escape: () => void }) {
+  const ref = useRef<HTMLDialogElement>(null)
+  useEffect(() => {
+    ref.current!.showModal()
+  })
+  return (<dialog
+    className={styles.helpmodal}
+    ref={ref}
+    onClose={on_escape}
+    onKeyDown={useCallback((e: React.KeyboardEvent) => {
+      if (e.key === "Escape") {
+        on_escape()
+      }
+    }, [on_escape])}
+    onClick={useCallback((e: React.MouseEvent) => {
+      if (e.target === ref.current) {
+        on_escape()
+      }
+    }, [on_escape])}
+  >
+    <div>
+      <h1>How to Quantum Mechanics</h1>
+      <p>
+        :: :: :: Quantum mechanics is mysterious, ...but what if it weren't? :: :: ::
+      </p>
+      <br />
+      <h2>Interactive demos are the best way to understand how things work.</h2>
+      <p>
+        To use this demo, click and drag on the page to edit the <b>potential
+          energy</b> and the <b>wavefunction</b>. The buttons at the top of the
+        screen allow you toswitch what you're editing, or select <b>energy
+          eigenstates</b>.
+      </p>
+      <br />
+      <h2>An eigen-what-now? Wave-funct-o-whatever?</h2>
+      <p>
+        TODO: Explain basic QM
+      </p>
+    </div>
+  </dialog>)
 }
 
 function CanvasClickDetector({
@@ -316,6 +374,8 @@ function DrawStuff({
 
   return <></>
 }
+
+
 
 // function The2() {
 //   const glx = useGLX()
