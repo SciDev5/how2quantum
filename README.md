@@ -1,6 +1,6 @@
 # How2Quantum
 
-(live demo)[https://scidev5.github.io/how2quantum/]
+[live demo](https://scidev5.github.io/how2quantum/)
 
 
 Quantum mechanics is mysterious, ...but what if it weren't?
